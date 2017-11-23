@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """Main module."""
 
+import json
 import gspread
+# from oauth2client.client import SignedJwtAssertionCredentials
+from oauth2client.service_account import ServiceAccountCredentials
 
 from lxml import etree
 from lxml import objectify
@@ -10,6 +13,17 @@ et = etree.fromstring(open('/home/john/Downloads/export(37).xml').read())
 types = et.find('.//Types')
 parts = et.find('.//Parts')
 content = et.find('.//Content')
+
+scope = [
+    'https://spreadsheets.google.com/feeds',
+    'https://www.googleapis.com/auth/drive'
+]
+
+json_key = json.load('gsheetsync-bac80241bd44.json')
+credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'].encode(), scope)
+gc = gspread.authorize(credentials)
+
+sheet = gc.open("Test from gsheetsync")
 
 def wks_from_contenttype(el):
     """

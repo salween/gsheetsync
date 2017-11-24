@@ -9,21 +9,22 @@ from oauth2client.service_account import ServiceAccountCredentials
 from lxml import etree
 from lxml import objectify
 
-et = etree.fromstring(open('/home/john/Downloads/export(37).xml').read())
-types = et.find('.//Types')
-parts = et.find('.//Parts')
-content = et.find('.//Content')
-
 scope = [
     'https://spreadsheets.google.com/feeds',
     'https://www.googleapis.com/auth/drive'
 ]
 
-json_key = json.load('gsheetsync-bac80241bd44.json')
-credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'].encode(), scope)
+json_key = json.load(open('gsheetsync-bac80241bd44.json'))
+credentials = ServiceAccountCredentials.from_json_keyfile_name('gsheetsync-bac80241bd44.json', scope)
+
 gc = gspread.authorize(credentials)
 
 sheet = gc.open("Test from gsheetsync")
+
+et = etree.fromstring(open('orchard-content.xml').read())
+types = et.find('.//Types')
+parts = et.find('.//Parts')
+content = et.find('.//Content')
 
 def wks_from_contenttype(el):
     """
@@ -33,13 +34,22 @@ def wks_from_contenttype(el):
     columns for the fields. Pull in fields from <Parts> child elements.
     """
     headings = ['Id']
-    wks = sheet.worksheet(el.tag) # TODO create if it doesn't exist
+
+    try:
+        wks = sheet.worksheet(el.tag)
+    except gspread.exceptions.WorksheetNotFound:
+        wks = sheet.add_worksheet(el.tag, 1000, 26)
+
     for p in el:
         part = parts.find(p.tag)
-        for field in part:
-            headings.append('%s (%s)' % field.tag, field.get('DisplayName'))
+        if part:
+            for field in part:
+                headings.append('%s (%s)' % field.tag, field.get('DisplayName'))
     wks.insert_row(headings)
     return wks
+
+for el in types.getchildren():
+    wks_from_contenttype(el)
 
 def row_from_contentitem(el):
     """

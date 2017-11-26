@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Top-level package for  Roundtrip Orchard content to Google Sheets via XML."""
+"""Top-level package for Roundtrip Orchard content to Spreadheets via XML."""
 
 __author__ = """Jean Jordaan"""
 __email__ = 'jean@salweensolutions.com'

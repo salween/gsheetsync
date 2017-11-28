@@ -16,7 +16,8 @@ requirements = [
     'oauth2client',
     'gspread',
     'lxml',
-    'tinydb',
+    'unicodecsv',
+    'openpyxl'
 ]
 
 setup_requirements = [
@@ -38,6 +39,11 @@ setup(
     author_email='jean@salweensolutions.com',
     url='https://github.com/jean/gsheetsync',
     packages=find_packages(include=['gsheetsync']),
+    entry_points={
+        'console_scripts': [
+            'gsheetsync=gsheetsync.cli:main'
+        ]
+    },
     include_package_data=True,
     install_requires=requirements,
     license="GNU General Public License v3",

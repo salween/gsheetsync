@@ -1,118 +1,74 @@
 # -*- coding: utf-8 -*-
 """Main module."""
 
+import glob
 from lxml import etree
-from oauth2client.service_account import ServiceAccountCredentials
-import gspread
-import json
-from tinydb import TinyDB, Query, where
-
-def connect_sheet(title):
-    """
-    Connect to a Google Sheet
-    """
-    scope = [
-        'https://spreadsheets.google.com/feeds',
-        'https://www.googleapis.com/auth/drive'
-    ]
-
-    json_key = json.load(open('gsheetsync-bac80241bd44.json'))
-    credentials = ServiceAccountCredentials.from_json_keyfile_name('gsheetsync-bac80241bd44.json', scope)
-
-    gc = gspread.authorize(credentials)
-
-    try:
-        sheet = gc.open(title)
-    except gspread.exceptions.SpreadsheetNotFound:
-        sheet = gc.create(title)
-
-    return sheet
+import unicodecsv as csv
 
 et = etree.fromstring(open('orchard-content.xml').read())
-types = et.find('.//Types')
-parts = et.find('.//Parts')
-content = et.find('.//Content')
+# types = et.find('.//Types')
+# parts = et.find('.//Parts')
 
-db = TinyDB('db.json')
+def field_to_header(field, attribute):
+    return '{0}:{1}'.format(field.tag, attribute)
 
-def schema_from_contenttype(el):
+def get_header(ct):
+    """Get header for a content type, by crawling all the content items
     """
-    Generate schema tables
-    """
-    print('type', el.tag)
-    table = db.table("schemas")
-    fields = {'item_id': 'Identity', 'contenttype': el.tag}
-    for p in el:
-        part = parts.find(p.tag)
-        print('  part', p.tag)
-        if part is not None:
-            for field in part:
-                print('    field', field.tag)
-                fields[field.tag] = field.get('DisplayName')
-    table.upsert(fields, where('contenttype') == el.tag)
+    header_dict = {}
+    for item in content.findall(ct.tag):
+        for field in item:
+            for attribute in field.keys():
+                header_dict[field_to_header(field, attribute)] = None
+    return sorted(header_dict.keys())
 
-def wks_from_contenttype(el):
+def csv_from_contenttype(ct):
     """
-    Create a worksheet for an Orchard ContentType.
+    Create a CSV file for an Orchard ContentType.
 
     Given a child of an Orchard <Types> element, generate a worksheet with
     columns for the fields. Pull in fields from <Parts> child elements.
     """
-    headings = ['Id']
+    header = ['Id']
+    header.extend(get_header(ct))
 
-    try:
-        wks = sheet.worksheet(el.tag)
-        # TODO: update header line
-        return wks
-    except gspread.exceptions.WorksheetNotFound:
-        wks = sheet.add_worksheet(el.tag, 1000, 26)
+    with open('{0}.csv'.format(el.tag), 'wb') as csvfile:
+        print(csvfile.name)
+        writer = csv.DictWriter(csvfile, fieldnames=header)
+        writer.writeheader()
 
-    print('type', el.tag)
-    for p in el:
-        part = parts.find(p.tag)
-        print('  part', p.tag)
-        if part is not None:
-            for field in part:
-                print('    field', field.tag)
-                headings.append('{0} ({1})'.format(field.tag, field.get('DisplayName')))
-    wks.insert_row(headings)
-    return wks
+        for item in content.findall(ct.tag):
+            i = item.get('Id')
+            row = {'Id': i}
+            for field in item:
+                for attribute, value in field.items():
+                    row[field_to_header(field, attribute)] = value
+            writer.writerow(row)
 
+def csvs_from_contenttypes():
+    content = et.find('.//Content')
+    for ct in content:
+        csv_from_contenttype(ct)
 
-def row_from_contentitem(el):
-    """
-    Create rows for Orchard ContentItems.
+def xml_from_csv():
+    orchard = Element('Orchard')
+    orchard.Recipe = E.Recipe(E.ExportUtc(nowstr))
+    # orchard.Feature = E.Feature(enable=', '.join(site_description[0]['Features']))
+    # orchard.Settings = E.Settings(*list(genSettings(site_description[1]['Settings'])))
+    orchard.Migration = E.Migration(features="*")
+    # orchard.Command = E.Command("""
+    #     layer create Default /LayerRule:"true" /Description:"The widgets in this layer are displayed on all pages"
+    #     ...
+    #     """)
 
-    Given a child of an Orchard <Content> element, generate a row with
-    columns for the fields.
-    """
-    i = el.get('Id')
-    # schema = db.table('schemas').get(where('contenttype') == el.tag)
-    # values = {k:'' for k,v in schema.items()}
-    table = db.table(el.tag)
-    values = {'item_id': i}
-    for f in el:
-        for k,v in f.items():
-            values['{0}:{1}'.format(f.tag, k)] = v
-    # values.update({f.tag: f.get('Text') or f.get('Value') for f in el})
-    table.upsert(values, where('item_id')==i)
-
-def rows_from_contentitems(ct):
-    # wks = wks_from_contenttype(ct)
-    print('  content for', ct.tag)
-    for el in content.findall(ct.tag):
-        row_from_contentitem(el)
-
-
-def upload_sheet(orchard_xml):
-    pass
-
-def export_sheet(sheet_name):
-    pass
-
-# for el in types.getchildren():
-    # wks_from_contenttype(el)
-
-for ct in types.getchildren():
-    schema_from_contenttype(ct)
-    rows_from_contentitems(ct)
+    csv_filenames = glob.glob("*.csv")
+    orchard.ContentDefinition = E.ContentDefinition()
+    for fn in csv_filenames:
+        with open(fn, 'rb') as csvfile:
+            orchard.ContentDefinition.append(
+              E.Types(
+                *list(genContentTypes(site_description[2]['ContentTypes']))
+              E.Parts(
+                *list(genParts(site_description[3]['Parts']))
+              )
+            )

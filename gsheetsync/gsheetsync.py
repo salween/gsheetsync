@@ -62,13 +62,22 @@ def xml_from_csv():
     #     """)
 
     csv_filenames = glob.glob("*.csv")
-    orchard.ContentDefinition = E.ContentDefinition()
+    orchard.Content = E.Content()
     for fn in csv_filenames:
         with open(fn, 'rb') as csvfile:
-            orchard.ContentDefinition.append(
-              E.Types(
-                *list(genContentTypes(site_description[2]['ContentTypes']))
-              E.Parts(
-                *list(genParts(site_description[3]['Parts']))
-              )
-            )
+            data = csv.DictReader(csvfile)
+            for row in data:
+                item = {}
+                for fieldattr, value in row.items():
+                    tagname, attribute = fieldattr.split(':')
+                    attr_values = item.setdefault(tagname, {})
+                    attr_values[attribute] = value
+                el = E.get(fn)
+                for field, attrs in item.items():
+
+
+
+
+
+
+return data

@@ -35,7 +35,7 @@ def csv_from_contenttype(ct):
     Create a CSV file for an Orchard ContentType.
 
     Given a child of an Orchard <Types> element, generate a worksheet with
-    columns for the fields. Pull in fields from <Parts> child elements.
+    columns for the fields.
     """
     header = get_header(ct)
 
@@ -124,9 +124,4 @@ def xml_from_csv():
     ff = open('import.xml', 'wb')
     ff.write(etree.tostring(orchard, pretty_print=True))
     ff.close()
-
-
-
-
-
 

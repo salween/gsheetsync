@@ -1,12 +1,19 @@
 # -*- coding: utf-8 -*-
 """Main module."""
 
+from datetime import datetime
 import glob
 from lxml import etree
+from lxml import objectify
 import unicodecsv as csv
+import hashlib
+
+Element = objectify.Element
+E = objectify.E
+nowstr = datetime.now().strftime('%Y-%m-%d')
 
 et = etree.fromstring(open('orchard-content.xml').read())
-# types = et.find('.//Types')
+content = et.find('.//Content')
 # parts = et.find('.//Parts')
 
 def field_to_header(field, attribute):
@@ -29,26 +36,32 @@ def csv_from_contenttype(ct):
     Given a child of an Orchard <Types> element, generate a worksheet with
     columns for the fields. Pull in fields from <Parts> child elements.
     """
-    header = ['Id']
-    header.extend(get_header(ct))
+    header = get_header(ct)
 
-    with open('{0}.csv'.format(el.tag), 'wb') as csvfile:
-        print(csvfile.name)
+    with open('{0}.csv'.format(ct.tag), 'wb') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=header)
         writer.writeheader()
 
         for item in content.findall(ct.tag):
             i = item.get('Id')
-            row = {'Id': i}
+            row = {'IdentityPart:Identifier': i.split('=')[1]}
             for field in item:
                 for attribute, value in field.items():
                     row[field_to_header(field, attribute)] = value
             writer.writerow(row)
 
 def csvs_from_contenttypes():
-    content = et.find('.//Content')
-    for ct in content:
+    types = et.find('.//Types')
+    for ct in types:
         csv_from_contenttype(ct)
+
+def sha_id(row):
+    keys = list(row.keys())
+    keys.sort()
+    values = [row[k] for k in keys]
+    sha1 = hashlib.sha1()
+    sha1.update(repr(values).encode('utf-8'))
+    return sha1.hexdigest()
 
 def xml_from_csv():
     orchard = Element('Orchard')
@@ -64,20 +77,32 @@ def xml_from_csv():
     csv_filenames = glob.glob("*.csv")
     orchard.Content = E.Content()
     for fn in csv_filenames:
+        ct = fn.replace('.csv', '')
         with open(fn, 'rb') as csvfile:
             data = csv.DictReader(csvfile)
             for row in data:
                 item = {}
                 for fieldattr, value in row.items():
                     tagname, attribute = fieldattr.split(':')
-                    attr_values = item.setdefault(tagname, {})
-                    attr_values[attribute] = value
-                el = E.get(fn)
-                for field, attrs in item.items():
+                    if value:
+                        attr_values = item.setdefault(tagname, {})
+                        attr_values[attribute] = value
+                if not item.get('IdentityPart'):
+                    item['IdentityPart'] = {'Identifier': sha_id(row)}
+                el = getattr(E, ct)(
+                    *[getattr(E, tag)(attributes) for tag, attributes in item.items()],
+                    Id="/Identifier=%s"%item['IdentityPart']['Identifier'],
+                    Status="Published"
+                )
+                orchard.Content.append(el)
+
+    objectify.deannotate(orchard, cleanup_namespaces=True)
+    ff = open('orchard-content-out.xml', 'wb')
+    ff.write(etree.tostring(orchard, pretty_print=True))
+    ff.close()
 
 
 
 
 
 
-return data

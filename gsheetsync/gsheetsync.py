@@ -12,7 +12,7 @@ Element = objectify.Element
 E = objectify.E
 nowstr = datetime.now().strftime('%Y-%m-%d')
 
-et = etree.fromstring(open('orchard-content.xml').read())
+et = etree.fromstring(open('export.xml').read())
 content = et.find('.//Content')
 # parts = et.find('.//Parts')
 
@@ -97,7 +97,7 @@ def xml_from_csv():
                 orchard.Content.append(el)
 
     objectify.deannotate(orchard, cleanup_namespaces=True)
-    ff = open('orchard-content-out.xml', 'wb')
+    ff = open('import.xml', 'wb')
     ff.write(etree.tostring(orchard, pretty_print=True))
     ff.close()
 

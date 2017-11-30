@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """Main module."""
 
-from datetime import datetime
 import glob
+import hashlib
+from datetime import datetime
 from lxml import etree
 from lxml import objectify
 import unicodecsv as csv
-import hashlib
+import openpyxl
 
 Element = objectify.Element
 E = objectify.E
@@ -54,6 +55,29 @@ def csvs_from_contenttypes():
     types = et.find('.//Types')
     for ct in types:
         csv_from_contenttype(ct)
+
+def xls_from_csv():
+    csv_filenames = glob.glob("*.csv")
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+    for fn in csv_filenames:
+        ct = fn.replace('.csv', '')
+        ws = wb.create_sheet(ct)
+        with open(fn, 'rb') as csvfile:
+            data = csv.reader(csvfile)
+            for row in data:
+                ws.append(row)
+    wb.save('orchard.xlsx')
+    return wb
+
+def csv_from_xls():
+    wb = openpyxl.load_workbook('orchard.xlsx')
+    for sheetname in wb.sheetnames:
+        ws = wb.get_sheet_by_name(sheetname)
+        with open('{0}.csv'.format(sheetname), 'wb') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in ws.iter_rows():
+                writer.writerow([c.value for c in row])
 
 def sha_id(row):
     keys = list(row.keys())

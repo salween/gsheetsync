@@ -12,9 +12,9 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    # TODO: put package requirements here
-    'oauth2client',
-    'gspread',
+    'Click>=6.0',
+#   'oauth2client',
+#   'gspread',
     'lxml',
     'unicodecsv',
     'openpyxl'
@@ -22,7 +22,6 @@ requirements = [
 
 setup_requirements = [
     'pytest-runner',
-    # TODO(jean): put setup requirements (distutils extensions, etc.) here
 ]
 
 test_requirements = [

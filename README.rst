@@ -30,6 +30,20 @@ Features
 
 * TODO
 
+Usage
+-----
+
+Invoke with an XML or XSLX file::
+
+   # ./bin/gsheetsync --help
+   Usage: gsheetsync [OPTIONS] INFILE
+
+   Specify an XML file to generate an XSLX file, or an XSLX file to generate
+   an XML file. This script generates intermediate CSV files.
+
+   Options:
+     --help  Show this message and exit.
+
 Credits
 ---------
 
